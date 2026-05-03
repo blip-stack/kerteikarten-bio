@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bio 4 — Karteikarten</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-elev: #ffffff;
+    --ink: #0c0a09;
+    --ink-soft: #44403c;
+    --ink-mute: #78716c;
+    --line: #e7e5e4;
+    --line-strong: #d6d3d1;
+    --accent: #0c0a09;
+    --good: #166534;
+    --bad: #991b1b;
+    --shadow-sm: 0 1px 2px rgba(12,10,9,0.04);
+    --shadow-md: 0 8px 24px -8px rgba(12,10,9,0.12), 0 2px 6px -2px rgba(12,10,9,0.06);
+    --shadow-lg: 0 30px 60px -20px rgba(12,10,9,0.18), 0 12px 28px -12px rgba(12,10,9,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c0a09;
+      --surface: #1c1917;
+      --surface-elev: #292524;
+      --ink: #fafaf9;
+      --ink-soft: #d6d3d1;
+      --ink-mute: #a8a29e;
+      --line: #292524;
+      --line-strong: #44403c;
+      --accent: #fafaf9;
+      --good: #4ade80;
+      --bad: #f87171;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 8px 24px -8px rgba(0,0,0,0.5), 0 2px 6px -2px rgba(0,0,0,0.3);
+      --shadow-lg: 0 30px 60px -20px rgba(0,0,0,0.7), 0 12px 28px -12px rgba(0,0,0,0.4);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-feature-settings: "ss01", "cv11";
+    letter-spacing: -0.01em;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .brand-dot {
+    width: 8px; height: 8px;
+    background: var(--ink);
+    border-radius: 50%;
+  }
+  .brand-sub {
+    color: var(--ink-mute);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .topbar-right {
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--ink-mute);
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .counter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 12px;
+  }
+  .counter-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .counter-pill.good .dot { background: var(--good); }
+  .counter-pill.bad .dot { background: var(--bad); }
+
+  /* Filter strip */
+  .filter-strip {
+    padding: 14px 24px 4px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .filter-strip::-webkit-scrollbar { display: none; }
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    min-width: max-content;
+    padding-bottom: 12px;
+  }
+  .chip {
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+  }
+  .chip:hover {
+    border-color: var(--line-strong);
+    color: var(--ink);
+  }
+  .chip.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .chip-count {
+    opacity: 0.55;
+    margin-left: 6px;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+  }
+
+  /* Main */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Progress */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    font-size: 12px;
+    color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .progress-bar {
+    height: 2px;
+    background: var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--ink);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+
+  /* Card */
+  .card-wrap {
+    perspective: 2000px;
+    margin-bottom: 24px;
+  }
+  .card {
+    width: 100%;
+    min-height: 420px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .card-side {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background: var(--surface-elev);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 40px 36px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-md);
+    overflow-y: auto;
+  }
+  .card:hover .card-side { box-shadow: var(--shadow-lg); }
+  .card-back {
+    transform: rotateY(180deg);
+    background: var(--surface);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-mute);
+  }
+  .card-side-label {
+    color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
+  }
+  .question {
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  .answer {
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    white-space: pre-line;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    letter-spacing: -0.005em;
+  }
+  .answer-inner { width: 100%; }
+  .flip-hint {
+    position: absolute;
+    bottom: 18px;
+    left: 36px;
+    font-size: 11px;
+    color: var(--ink-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.7;
+  }
+  .kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    letter-spacing: 0;
+  }
+
+  /* Controls */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .btn {
+    padding: 14px 20px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--ink);
+    transition: all 0.15s ease;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .btn:hover {
+    background: var(--bg);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn:active { transform: translateY(0); }
+  .btn .kbd {
+    background: var(--bg);
+    border-color: var(--line);
+  }
+  .btn-primary {
+    grid-column: span 2;
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .btn-primary:hover { background: var(--ink-soft); }
+  .btn-primary .kbd {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.2);
+    color: var(--bg);
+  }
+  @media (prefers-color-scheme: dark) {
+    .btn-primary .kbd {
+      background: rgba(0,0,0,0.2);
+      border-color: rgba(0,0,0,0.3);
+    }
+  }
+
+  /* Done screen */
+  .done {
+    background: var(--surface-elev);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 60px 40px;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+  }
+  .done-mark {
+    font-size: 28px;
+    margin-bottom: 16px;
+    letter-spacing: 0.2em;
+    color: var(--ink-mute);
+  }
+  .done h2 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+  .done p {
+    color: var(--ink-mute);
+    margin-bottom: 28px;
+    font-size: 14px;
+  }
+  .done-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 28px;
+  }
+  .done-stat {
+    text-align: center;
+  }
+  .done-stat-num {
+    font-size: 32px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+  .done-stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-mute);
+    margin-top: 4px;
+  }
+
+  @media (max-width: 600px) {
+    .topbar { padding: 14px 16px; }
+    main { padding: 16px; }
+    .card-side { padding: 28px 24px; }
+    .question { font-size: 22px; }
+    .answer { font-size: 16px; }
+    .card, .card-side { min-height: 380px; }
+    .flip-hint { left: 24px; bottom: 14px; }
+    .topbar-right .kbd-hint { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-dot"></span>
+    Bio 4
+    <span class="brand-sub">— Karteikarten</span>
+  </div>
+  <div class="topbar-right">
+    <span class="counter-pill good"><span class="dot"></span><span id="rightCount">0</span></span>
+    <span class="counter-pill bad"><span class="dot"></span><span id="wrongCount">0</span></span>
+  </div>
+</header>
+
+<nav class="filter-strip">
+  <div class="filter-row" id="filterBar"></div>
+</nav>
+
+<main>
+  <div class="progress-row">
+    <span id="progress">— / —</span>
+    <span id="topicLabel"></span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div id="cardArea">
+    <div class="card-wrap">
+      <div class="card" id="card" onclick="flip()">
+        <div class="card-side card-front">
+          <div class="card-header">
+            <span id="topicTag">Thema</span>
+            <span class="card-side-label">Frage</span>
+          </div>
+          <div class="question" id="question">Lade Karte…</div>
+          <div class="flip-hint">Karte umdrehen <span class="kbd">Leertaste</span></div>
+        </div>
+        <div class="card-side card-back">
+          <div class="card-header">
+            <span id="topicTag2">Thema</span>
+            <span class="card-side-label">Antwort</span>
+          </div>
+          <div class="answer"><div class="answer-inner" id="answer">…</div></div>
+          <div class="flip-hint">Zurück <span class="kbd">Leertaste</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls" id="controls">
+      <button class="btn" onclick="markWrong()" aria-label="Nochmal üben">
+        Nochmal üben
+        <span class="kbd">←</span>
+      </button>
+      <button class="btn" onclick="markRight()" aria-label="Kann ich">
+        Kann ich
+        <span class="kbd">→</span>
+      </button>
+      <button class="btn btn-primary" onclick="next()" aria-label="Weiter">
+        Weiter
+        <span class="kbd">↵</span>
+      </button>
+    </div>
+  </div>
+</main>
+
+<script>
+const cards = [
+  // ===================== IMMUNSYSTEM =====================
+  { topic: "Immunsystem", q: "Was ist das angeborene Immunsystem?",
+    a: "Das angeborene Immunsystem ist von Geburt an vorhanden. Es reagiert SCHNELL und UNSPEZIFISCH — also gleich bei jedem Erreger." },
+  { topic: "Immunsystem", q: "Was ist das erworbene Immunsystem?",
+    a: "Das erworbene Immunsystem reagiert LANGSAMER, dafür GEZIELT auf bestimmte Erreger. Es bildet Gedächtniszellen und kann durch Impfen gestärkt werden." },
+  { topic: "Immunsystem", q: "Wie schnell und wie spezifisch reagiert das angeborene Immunsystem?",
+    a: "Schnell und unspezifisch — bekämpft viele Erreger auf ähnliche Weise, reagiert gleich auf jeden Angriff." },
+  { topic: "Immunsystem", q: "Wie schnell und wie spezifisch reagiert das erworbene Immunsystem?",
+    a: "Langsamer, dafür gezielt auf ganz bestimmte Erreger." },
+  { topic: "Immunsystem", q: "Welche Barrieren gehören zum angeborenen Immunsystem?",
+    a: "• Haut\n• Schleimhäute\n• Magensäure" },
+  { topic: "Immunsystem", q: "Was machen Fresszellen?",
+    a: "Sie „fressen\" die Erreger auf — sie gehören zum angeborenen Immunsystem." },
+  { topic: "Immunsystem", q: "Was machen Killerzellen?",
+    a: "Sie zerstören infizierte Körperzellen — sie gehören zum angeborenen Immunsystem." },
+  { topic: "Immunsystem", q: "Was machen T-Zellen?",
+    a: "T-Zellen aktivieren andere Abwehrzellen und zerstören infizierte Körperzellen. Sie gehören zum erworbenen Immunsystem." },
+  { topic: "Immunsystem", q: "Was machen B-Zellen?",
+    a: "B-Zellen bilden Antikörper, die Erreger gezielt erkennen und bekämpfen. Sie gehören zum erworbenen Immunsystem." },
+  { topic: "Immunsystem", q: "Was sind Antikörper?",
+    a: "Antikörper sind Stoffe, die von B-Zellen gebildet werden. Sie erkennen Erreger gezielt und bekämpfen sie." },
+  { topic: "Immunsystem", q: "Was sind Gedächtniszellen?",
+    a: "Gedächtniszellen merken sich Erreger und beschleunigen die Abwehr beim nächsten Kontakt. Sie gehören zum erworbenen Immunsystem." },
+  { topic: "Immunsystem", q: "Wie kann das erworbene Immunsystem gestärkt werden?",
+    a: "Durch IMPFEN." },
+  { topic: "Immunsystem", q: "Nenne 4 Bestandteile des angeborenen Immunsystems.",
+    a: "• Physikalische Barrieren (Haut, Schleimhäute, Magensäure)\n• Fresszellen\n• Komplementsystem\n• Entzündungsreaktion" },
+  { topic: "Immunsystem", q: "Nenne die 4 Erregergruppen, die Krankheiten auslösen.",
+    a: "• Viren\n• Bakterien\n• Pilze\n• Parasiten" },
+  { topic: "Immunsystem", q: "Nenne mindestens 5 Faktoren für ein gesundes Immunsystem.",
+    a: "• Gesunde Ernährung\n• Saubere/frische Luft\n• Sonne\n• Bewegung\n• Stabiler seelischer Zustand\n• Ausreichend Schlaf\n• Hygiene" },
+  { topic: "Immunsystem", q: "Welche Rolle spielt Hygiene für das Immunsystem?",
+    a: "Hygiene gehört zu den wichtigen Faktoren für ein gesundes Immunsystem — sie verringert Kontakt mit Krankheitserregern." },
+  { topic: "Immunsystem", q: "Was passiert bei einer Entzündungsreaktion?",
+    a: "Die Entzündungsreaktion ist Teil des angeborenen Immunsystems. Bei Infektionen oder Verletzungen lockt sie Abwehrzellen an, um die Erreger zu bekämpfen." },
+
+  // ===================== ERNÄHRUNG =====================
+  { topic: "Ernährung", q: "Welche 3 Hauptnährstoffgruppen gibt es?",
+    a: "• Kohlenhydrate\n• Eiweiß (Proteine)\n• Fette" },
+  { topic: "Ernährung", q: "Wofür sind Kohlenhydrate wichtig?",
+    a: "Kohlenhydrate liefern dem Körper SCHNELL Energie." },
+  { topic: "Ernährung", q: "Wofür ist Eiweiß wichtig?",
+    a: "Eiweiß ist der BAUSTOFF des Körpers — z. B. für Muskeln, Haare und Zellen." },
+  { topic: "Ernährung", q: "Wofür sind Fette wichtig?",
+    a: "Fette liefern dem Körper SEHR VIEL Energie (Energiespeicher)." },
+  { topic: "Ernährung", q: "Was sind Ballaststoffe?",
+    a: "Ballaststoffe sind unverdauliche Bestandteile pflanzlicher Nahrung." },
+  { topic: "Ernährung", q: "In welchen Lebensmitteln stecken Ballaststoffe?",
+    a: "Z. B. in Vollkornprodukten, Obst und Gemüse." },
+  { topic: "Ernährung", q: "Welche Wirkung haben Ballaststoffe im Körper?",
+    a: "Sie quellen im Darm auf, fördern die Darmtätigkeit und sorgen für eine lange Sättigung. Sie unterstützen eine gesunde Ernährung." },
+  { topic: "Ernährung", q: "Beurteile: \"Ballaststoffe belasten den Körper.\"",
+    a: "FALSCH! Ballaststoffe sind sogar gesund — sie fördern die Darmtätigkeit und sättigen lange." },
+  { topic: "Ernährung", q: "Was ist eine ausgewogene Ernährung?",
+    a: "Eine Ernährung, die alle wichtigen Nährstoffgruppen enthält: Kohlenhydrate, Eiweiß und Fette — am besten mit ausreichend Obst, Gemüse und Ballaststoffen." },
+
+  // ===================== BLUT =====================
+  { topic: "Blut", q: "Wofür versorgt das Blut den Körper?",
+    a: "Es versorgt Organe und Gewebe mit Sauerstoff und Nährstoffen UND entsorgt CO₂ und andere Abfallprodukte der Körperzellen." },
+  { topic: "Blut", q: "Was hat Blut mit der Körpertemperatur zu tun?",
+    a: "Das Blut spielt eine wichtige Rolle bei der Regulierung der Körpertemperatur." },
+  { topic: "Blut", q: "Was transportiert das Blut außer Sauerstoff und Nährstoffen?",
+    a: "Auch Hormone werden über die Blutbahnen transportiert (Stofftransport)." },
+  { topic: "Blut", q: "Welche Rolle spielt Blut bei der Immunabwehr?",
+    a: "Zellen und Proteine im Blut dienen der Abwehr von Krankheitserregern." },
+  { topic: "Blut", q: "Welche Rolle spielt Blut bei Verletzungen?",
+    a: "Spezielle Bestandteile des Blutes (Blutplättchen) dienen bei Verletzungen zur Wundheilung (Blutgerinnung)." },
+  { topic: "Blut", q: "Nenne 5 Aufgaben des Blutes.",
+    a: "• Versorgt mit O₂ und Nährstoffen, entsorgt CO₂\n• Reguliert Körpertemperatur\n• Transportiert Hormone\n• Abwehr von Krankheitserregern\n• Wundheilung bei Verletzungen" },
+  { topic: "Blut", q: "Nenne die 4 Hauptbestandteile des Blutes.",
+    a: "• Rote Blutkörperchen\n• Weiße Blutkörperchen\n• Blutplättchen\n• Blutplasma" },
+  { topic: "Blut", q: "Was ist die Aufgabe der ROTEN Blutkörperchen?",
+    a: "Sie transportieren den Sauerstoff durch die Organe und das Gewebe des Körpers." },
+  { topic: "Blut", q: "Was ist die Aufgabe der WEISSEN Blutkörperchen?",
+    a: "Sie bekämpfen Krankheitserreger (gehören zur Immunabwehr)." },
+  { topic: "Blut", q: "Was ist die Aufgabe der Blutplättchen?",
+    a: "Sie regeln die Blutgerinnung und Blutstillung bei Verletzungen." },
+  { topic: "Blut", q: "Was ist Blutplasma?",
+    a: "Eine gelbliche Flüssigkeit, die unter anderem Proteine, Nährstoffe, Blutzellen und sonstige Bestandteile durch den Körper transportiert." },
+
+  // ===================== HERZ & KREISLAUF =====================
+  { topic: "Herz & Kreislauf", q: "Was ist das Herz für ein Organ?",
+    a: "Das Herz ist ein HOHLMUSKEL." },
+  { topic: "Herz & Kreislauf", q: "Welche Aufgabe hat das Herz?",
+    a: "Es pumpt das Blut durch den Körper zu den Organen." },
+  { topic: "Herz & Kreislauf", q: "Wie heißt der „kleine Blutkreislauf\" in der Fachsprache?",
+    a: "LUNGENKREISLAUF" },
+  { topic: "Herz & Kreislauf", q: "Wie heißt der „große Blutkreislauf\" in der Fachsprache?",
+    a: "KÖRPERKREISLAUF" },
+  { topic: "Herz & Kreislauf", q: "Was passiert im Lungenkreislauf?",
+    a: "Das Blut wird durch die Lungen gepumpt. Dort findet der Gasaustausch statt — CO₂ wird abgegeben, Sauerstoff aufgenommen." },
+  { topic: "Herz & Kreislauf", q: "Was passiert im Körperkreislauf?",
+    a: "Das Blut wird zu den Organen und allen Gewebezellen transportiert. Sie werden mit Sauerstoff und Nährstoffen versorgt — und geben CO₂ und Abfallstoffe an das Blut ab." },
+  { topic: "Herz & Kreislauf", q: "Wo findet der Gasaustausch statt?",
+    a: "In der LUNGE — dort wird CO₂ abgegeben und Sauerstoff aufgenommen." },
+  { topic: "Herz & Kreislauf", q: "Wie kommt das Blut von der rechten Herzkammer zur Lunge?",
+    a: "Über die LUNGENARTERIE." },
+  { topic: "Herz & Kreislauf", q: "Wie kommt das sauerstoffreiche Blut von der Lunge zurück zum Herz?",
+    a: "Über die LUNGENVENE — es gelangt in die linke Herzkammer." },
+  { topic: "Herz & Kreislauf", q: "Wohin fließt das Blut aus der linken Herzkammer?",
+    a: "In den großen Blutkreislauf (Körperkreislauf) — zu allen Organen." },
+  { topic: "Herz & Kreislauf", q: "Beschreibe den kompletten Weg: Herz → Lunge → Herz",
+    a: "Rechte Herzkammer → Lungenarterie → Lunge (Gasaustausch: CO₂ raus, O₂ rein) → Lungenvene → linke Herzkammer → großer Kreislauf." },
+
+  // ===================== VERDAUUNG =====================
+  { topic: "Verdauung", q: "Wo beginnt die Verdauung?",
+    a: "Schon im MUND. Dort wird die Nahrung mechanisch (Zähne) und durch Enzyme im Speichel zerkleinert." },
+  { topic: "Verdauung", q: "Stimmt die Aussage: \"Die Verdauung beginnt erst im Magen\"?",
+    a: "FALSCH! Sie beginnt schon im Mund — die Nahrung wird dort zerkleinert (Zähne) und durch Speichel-Enzyme zerlegt, bevor sie geschluckt wird." },
+  { topic: "Verdauung", q: "Nenne die Verdauungsorgane in der RICHTIGEN Reihenfolge.",
+    a: "Mundhöhle → Speiseröhre → Magen → Dünndarm → Dickdarm → Mastdarm → After" },
+  { topic: "Verdauung", q: "Welche Aufgabe hat die MUNDHÖHLE?",
+    a: "Zerkleinerung der Nahrung (durch Zähne) — und Stärke wird durch Speichel-Enzyme bereits zerlegt." },
+  { topic: "Verdauung", q: "Was passiert mit Stärke im Mund?",
+    a: "Sie wird durch Enzyme im Speichel bereits zerlegt." },
+  { topic: "Verdauung", q: "Welche Aufgabe hat die SPEISERÖHRE?",
+    a: "Sie ist ein Muskelschlauch, der die zerkleinerte Nahrung in den Magen befördert." },
+  { topic: "Verdauung", q: "Was für ein Organ ist die Speiseröhre?",
+    a: "Ein MUSKELSCHLAUCH." },
+  { topic: "Verdauung", q: "Welche Aufgabe hat der MAGEN?",
+    a: "Der Nahrungsbrei wird hier gesammelt und mit Magensaft durchmischt. Eiweiße (Proteine) werden zerlegt." },
+  { topic: "Verdauung", q: "Was passiert mit Eiweißen im Magen?",
+    a: "Sie werden zerlegt (durch den Magensaft)." },
+  { topic: "Verdauung", q: "Welche Aufgabe hat der DÜNNDARM?",
+    a: "Hier wird die Verdauung aller Nährstoffe abgeschlossen. Die Nahrungsbausteine werden ins Blut aufgenommen." },
+  { topic: "Verdauung", q: "Wo werden Nährstoffe ins Blut aufgenommen?",
+    a: "Im DÜNNDARM." },
+  { topic: "Verdauung", q: "Welche Aufgabe hat der DICKDARM?",
+    a: "Aufnahme von Wasser und Mineralstoffen. Sammeln der unverdaulichen Speisereste." },
+  { topic: "Verdauung", q: "Wo werden Wasser und Mineralstoffe aufgenommen?",
+    a: "Im DICKDARM." },
+  { topic: "Verdauung", q: "Welche Aufgabe hat der MASTDARM?",
+    a: "Sammeln des Kots." },
+  { topic: "Verdauung", q: "Welche Aufgabe hat der AFTER?",
+    a: "Ausscheiden des Kots." },
+  { topic: "Verdauung", q: "Welche Organe geben Verdauungssäfte ab?",
+    a: "Bauchspeicheldrüse und Leber (Galle)." },
+  { topic: "Verdauung", q: "In welche Bausteine wird die Nahrung zerlegt?",
+    a: "• Kohlenhydrate\n• Fette\n• Eiweiße\n\nKohlenhydrate und Fette werden für den Energiestoffwechsel genutzt; Eiweiße für den Aufbau (z. B. Muskeln, Haare)." },
+  { topic: "Verdauung", q: "Wofür werden Kohlenhydrate und Fette nach der Verdauung genutzt?",
+    a: "Für den ENERGIESTOFFWECHSEL des Körpers." },
+  { topic: "Verdauung", q: "Wofür werden Eiweiße nach der Verdauung genutzt?",
+    a: "Für den AUFBAU — z. B. Muskeln, Haare, Zellen (Baustoff)." },
+  { topic: "Verdauung", q: "Wie kommt die Nahrung in den Körper?",
+    a: "Aus dem Dünndarm werden die Bausteine ins Blut aufgenommen und dadurch im Körper verteilt." },
+
+  // ===================== AUGE — Anatomie =====================
+  { topic: "Auge — Bau", q: "Was ist die Lederhaut (Sclera)?",
+    a: "Die feste, weiße äußere Schutzschicht des Auges." },
+  { topic: "Auge — Bau", q: "Was ist die Aderhaut?",
+    a: "Die mittlere Schicht des Auges — sie versorgt das Auge mit Blut und Nährstoffen." },
+  { topic: "Auge — Bau", q: "Was ist die Netzhaut (Retina)?",
+    a: "Die innerste Schicht des Auges. Sie enthält die Fotorezeptoren — Stäbchen und Zapfen." },
+  { topic: "Auge — Bau", q: "Was ist die Hornhaut (Cornea)?",
+    a: "Die durchsichtige Vorderseite des Auges. Sie bündelt das einfallende Licht." },
+  { topic: "Auge — Bau", q: "Was ist die Iris (Regenbogenhaut)?",
+    a: "Die Iris gibt dem Auge seine Farbe und regelt die Lichtmenge, die ins Auge fällt (durch Verändern der Pupille)." },
+  { topic: "Auge — Bau", q: "Was ist die Pupille?",
+    a: "Das Loch in der Iris — durch das Licht ins Auge fällt." },
+  { topic: "Auge — Bau", q: "Was macht die Linse?",
+    a: "Sie bündelt das Licht (wie eine Sammellinse) und kann ihre Wölbung verändern (Akkommodation), um auf Nähe oder Ferne zu fokussieren." },
+  { topic: "Auge — Bau", q: "Was macht der Augenmuskel (Ziliarmuskel)?",
+    a: "Er verändert die Wölbung der Linse — wichtig für die Akkommodation." },
+  { topic: "Auge — Bau", q: "Was ist der Glaskörper?",
+    a: "Eine gallertartige (geleeartige) Masse, die das Auge füllt." },
+  { topic: "Auge — Bau", q: "Was macht der Sehnerv?",
+    a: "Er leitet die elektrischen Signale von der Netzhaut zum Gehirn." },
+  { topic: "Auge — Bau", q: "Welche 3 Hauptschichten hat das Auge (von außen nach innen)?",
+    a: "1. Lederhaut (Sclera)\n2. Aderhaut\n3. Netzhaut" },
+  { topic: "Auge — Bau", q: "Nenne 10 Bestandteile des Auges.",
+    a: "Lederhaut, Aderhaut, Netzhaut, Hornhaut, Iris, Pupille, Linse, Augenmuskel, Glaskörper, Sehnerv." },
+
+  // ===================== AUGE — Funktion =====================
+  { topic: "Auge — Funktion", q: "Was sind Stäbchen und Zapfen?",
+    a: "Die beiden Arten von Fotorezeptoren (Sinneszellen) im Auge — sie sitzen in der Netzhaut." },
+  { topic: "Auge — Funktion", q: "Wo befinden sich die STÄBCHEN?",
+    a: "Vor allem im RANDBEREICH der Netzhaut (Peripherie)." },
+  { topic: "Auge — Funktion", q: "Wo befinden sich die ZAPFEN?",
+    a: "Hauptsächlich im ZENTRUM der Netzhaut, besonders in der Fovea (Gelber Fleck)." },
+  { topic: "Auge — Funktion", q: "Wofür sind die Stäbchen zuständig?",
+    a: "Für das Sehen bei SCHWACHEM Licht (Dämmerungssehen) und für Helligkeitsunterschiede." },
+  { topic: "Auge — Funktion", q: "Wofür sind die Zapfen zuständig?",
+    a: "Für das FARBSEHEN und für scharfes Sehen bei Tageslicht." },
+  { topic: "Auge — Funktion", q: "Was ist der „Gelbe Fleck\" (Fovea)?",
+    a: "Das Zentrum der Netzhaut — dort sitzen besonders viele Zapfen. Hier sehen wir am schärfsten." },
+  { topic: "Auge — Funktion", q: "Wie wird das Bild auf der Netzhaut erzeugt?",
+    a: "Die Linse bündelt das Licht wie eine Sammellinse und erzeugt ein UMGEKEHRTES Bild auf der Netzhaut." },
+  { topic: "Auge — Funktion", q: "Wie kommt das Bild von den Augen ins Gehirn?",
+    a: "Die Fotorezeptoren (Stäbchen + Zapfen) wandeln das Bild in elektrische Signale um. Diese gehen über den Sehnerv ins Gehirn — vor allem in den visuellen Cortex im Hinterkopf." },
+  { topic: "Auge — Funktion", q: "Wo im Gehirn wird das Sehen verarbeitet?",
+    a: "Im VISUELLEN CORTEX im Hinterkopf." },
+  { topic: "Auge — Funktion", q: "Warum sehen wir das Bild „richtig herum\", obwohl es auf der Netzhaut auf dem Kopf steht?",
+    a: "Weil das GEHIRN das Bild umdreht. Die Sinneseindrücke werden im Gehirn verarbeitet und interpretiert — die Bildumkehr passiert dort." },
+  { topic: "Auge — Funktion", q: "Was ist die ADAPTATION?",
+    a: "Die Anpassung des Auges an die LICHTVERHÄLTNISSE (Helligkeit). Die PUPILLE weitet sich im Dunkeln und verengt sich im Hellen." },
+  { topic: "Auge — Funktion", q: "Welcher Teil des Auges ist für die Adaptation zuständig?",
+    a: "Die PUPILLE." },
+  { topic: "Auge — Funktion", q: "Was ist die AKKOMMODATION?",
+    a: "Die Anpassung des Auges an unterschiedliche ENTFERNUNGEN. Die Wölbung der LINSE wird verändert — für Kurz- und Weitsicht." },
+  { topic: "Auge — Funktion", q: "Welcher Teil des Auges ist für die Akkommodation zuständig?",
+    a: "Die LINSE (sie verändert ihre Wölbung)." },
+  { topic: "Auge — Funktion", q: "Was passiert mit der Pupille im Hellen?",
+    a: "Sie verengt sich (wird kleiner) — damit weniger Licht ins Auge fällt." },
+  { topic: "Auge — Funktion", q: "Was passiert mit der Pupille im Dunkeln?",
+    a: "Sie weitet sich (wird größer) — damit mehr Licht ins Auge fällt." },
+  { topic: "Auge — Funktion", q: "Wie ändert sich die Linse beim Schauen in die Ferne?",
+    a: "Die Linse wird FLACHER (weniger gewölbt)." },
+  { topic: "Auge — Funktion", q: "Wie ändert sich die Linse beim Schauen in die Nähe?",
+    a: "Die Linse wird RUNDER (stärker gewölbt)." },
+  { topic: "Auge — Funktion", q: "Beschreibe den Weg des Lichtreizes durchs Auge (vereinfacht).",
+    a: "Hornhaut → Pupille (durch die Iris) → Linse → Glaskörper → Netzhaut → Sehnerv → Gehirn" },
+
+  // ===================== ZUSAMMENHÄNGE =====================
+  { topic: "Zusammenhänge", q: "Wie hängen Atmung, Herz und Blut zusammen?",
+    a: "Das Herz pumpt das Blut durch die Lunge → in der Lunge nimmt das Blut O₂ auf und gibt CO₂ ab → das sauerstoffreiche Blut wird durch den Körper gepumpt und versorgt alle Zellen." },
+  { topic: "Zusammenhänge", q: "Wie hängen Verdauung und Blut zusammen?",
+    a: "Im Dünndarm werden die Nahrungsbausteine ins BLUT aufgenommen — das Blut verteilt sie dann im ganzen Körper." },
+  { topic: "Zusammenhänge", q: "Was haben Lunge und Dünndarm gemeinsam?",
+    a: "An beiden Orten gehen Stoffe ins Blut über: O₂ in der Lunge, Nährstoffbausteine im Dünndarm." },
+];
+
+let currentDeck = [...cards];
+let idx = 0;
+let stats = { right: 0, wrong: 0, seen: new Set() };
+let activeFilter = "Alle";
+let isDone = false;
+
+const topics = ["Alle", ...new Set(cards.map(c => c.topic))];
+
+function renderFilters() {
+  const bar = document.getElementById("filterBar");
+  bar.innerHTML = "";
+  topics.forEach(t => {
+    const btn = document.createElement("button");
+    btn.className = "chip" + (t === activeFilter ? " active" : "");
+    const count = (t === "Alle") ? cards.length : cards.filter(c => c.topic === t).length;
+    btn.innerHTML = `${t}<span class="chip-count">${count}</span>`;
+    btn.onclick = () => setFilter(t);
+    bar.appendChild(btn);
+  });
+}
+
+function setFilter(t) {
+  activeFilter = t;
+  currentDeck = (t === "Alle") ? [...cards] : cards.filter(c => c.topic === t);
+  shuffle(currentDeck);
+  idx = 0;
+  isDone = false;
+  stats = { right: 0, wrong: 0, seen: new Set() };
+  renderFilters();
+  document.getElementById("cardArea").innerHTML = `
+    <div class="card-wrap">
+      <div class="card" id="card" onclick="flip()">
+        <div class="card-side card-front">
+          <div class="card-header">
+            <span id="topicTag">Thema</span>
+            <span class="card-side-label">Frage</span>
+          </div>
+          <div class="question" id="question">…</div>
+          <div class="flip-hint">Karte umdrehen <span class="kbd">Leertaste</span></div>
+        </div>
+        <div class="card-side card-back">
+          <div class="card-header">
+            <span id="topicTag2">Thema</span>
+            <span class="card-side-label">Antwort</span>
+          </div>
+          <div class="answer"><div class="answer-inner" id="answer">…</div></div>
+          <div class="flip-hint">Zurück <span class="kbd">Leertaste</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" onclick="markWrong()">Nochmal üben<span class="kbd">←</span></button>
+      <button class="btn" onclick="markRight()">Kann ich<span class="kbd">→</span></button>
+      <button class="btn btn-primary" onclick="next()">Weiter<span class="kbd">↵</span></button>
+    </div>`;
+  render();
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+}
+
+function render() {
+  document.getElementById("rightCount").textContent = stats.right;
+  document.getElementById("wrongCount").textContent = stats.wrong;
+
+  if (idx >= currentDeck.length) {
+    isDone = true;
+    const total = stats.right + stats.wrong;
+    const pct = total > 0 ? Math.round(100 * stats.right / total) : 0;
+    document.getElementById("cardArea").innerHTML = `
+      <div class="done">
+        <div class="done-mark">— ENDE —</div>
+        <h2>Durch.</h2>
+        <p>${activeFilter} · ${total} Karten beantwortet</p>
+        <div class="done-stats">
+          <div class="done-stat">
+            <div class="done-stat-num">${stats.right}</div>
+            <div class="done-stat-label">Gewusst</div>
+          </div>
+          <div class="done-stat">
+            <div class="done-stat-num">${stats.wrong}</div>
+            <div class="done-stat-label">Nochmal</div>
+          </div>
+          <div class="done-stat">
+            <div class="done-stat-num">${pct}%</div>
+            <div class="done-stat-label">Quote</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="grid-column:auto;display:inline-flex;" onclick="setFilter(activeFilter)">Nochmal von vorn</button>
+      </div>`;
+    document.getElementById("progressFill").style.width = "100%";
+    document.getElementById("progress").textContent = `${currentDeck.length} / ${currentDeck.length}`;
+    document.getElementById("topicLabel").textContent = "";
+    return;
+  }
+  const c = currentDeck[idx];
+  document.getElementById("topicTag").textContent = c.topic;
+  document.getElementById("topicTag2").textContent = c.topic;
+  document.getElementById("question").textContent = c.q;
+  document.getElementById("answer").textContent = c.a;
+  document.getElementById("card").classList.remove("flipped");
+  document.getElementById("progress").textContent = `${idx + 1} / ${currentDeck.length}`;
+  document.getElementById("topicLabel").textContent = activeFilter;
+  document.getElementById("progressFill").style.width = `${(idx / currentDeck.length) * 100}%`;
+}
+
+function flip() {
+  if (isDone) return;
+  document.getElementById("card").classList.toggle("flipped");
+}
+function next() {
+  if (isDone) return;
+  idx++;
+  render();
+}
+function markRight() {
+  if (isDone) return;
+  if (!stats.seen.has(idx)) { stats.right++; stats.seen.add(idx); }
+  next();
+}
+function markWrong() {
+  if (isDone) return;
+  if (!stats.seen.has(idx)) { stats.wrong++; stats.seen.add(idx); }
+  const c = currentDeck[idx];
+  currentDeck.push(c);
+  next();
+}
+
+// Keyboard shortcuts
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (e.key === " ") { e.preventDefault(); flip(); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); markRight(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); markWrong(); }
+  else if (e.key === "Enter") { e.preventDefault(); next(); }
+});
+
+shuffle(currentDeck);
+renderFilters();
+render();
+</script>
+</body>
+</html>
